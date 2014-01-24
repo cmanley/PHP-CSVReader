@@ -13,7 +13,7 @@
 * @author    Craig Manley
 * @copyright Copyright © 2010, Craig Manley (www.craigmanley.com)
 * @license   http://www.opensource.org/licenses/mit-license.php Licensed under MIT
-* @version   $Id: CSVReader.php,v 1.13 2014/01/11 17:05:24 cmanley Exp $
+* @version   $Id: CSVReader.php,v 1.14 2014/01/24 11:29:56 cmanley Exp $
 * @package   cmanley
 */
 
@@ -365,7 +365,7 @@ class CSVReader implements Iterator {
 					$this->line_separator = "\n";
 				}
 			}
-			error_log(__METHOD__ . ' Guessed line separator: ' . bin2hex($this->line_separator));
+			$this->debug && error_log(__METHOD__ . ' Guessed line separator: ' . bin2hex($this->line_separator));
 		}
 
 		// Determine if transcoding is necessary for _fgetcsv().
