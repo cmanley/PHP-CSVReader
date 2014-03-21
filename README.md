@@ -36,4 +36,14 @@ foreach($reader as $row) { // $row is a CSVReaderRow object
 	print_r($row->toArray());
 	// TIP: Use PHP-Validate, by your's truly, to validate $row->toArray()
 }
+
+// Iterate over all the rows using while.
+while ($reader->valid()) {
+	$row = $reader->current(); // CSVReaderRow object
+	print 'Price: ' . $row->get('Price') . "\n";
+	print 'Name: ' . $row['Name'] . "\n"; // $row also supports array access
+	print_r($row->toArray());
+	// TIP: Use PHP-Validate, by your's truly, to validate $row->toArray()
+	$reader->next();
+}
 ```

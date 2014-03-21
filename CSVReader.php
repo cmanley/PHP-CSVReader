@@ -13,7 +13,7 @@
 * @author    Craig Manley
 * @copyright Copyright © 2010, Craig Manley (www.craigmanley.com)
 * @license   http://www.opensource.org/licenses/mit-license.php Licensed under MIT
-* @version   $Id: CSVReader.php,v 1.14 2014/01/24 11:29:56 cmanley Exp $
+* @version   $Id: CSVReader.php,v 1.15 2014/03/21 16:22:24 cmanley Exp $
 * @package   cmanley
 */
 
@@ -55,12 +55,22 @@ class CSVReaderException extends Exception {}
 *	// Show fieldnames from 1st row:
 *	print_r($reader->fieldNames());
 *
-*	// Iterate over all the rows. CVSReader behaves as an array.
+*	// Iterate over all the rows using foreach. CVSReader behaves as an array.
 *	foreach($reader as $row) { // $row is a CSVReaderRow object
 *		print 'Price: ' . $row->get('Price') . "\n";
 *		print 'Name: ' . $row['Name'] . "\n"; // $row also supports array access
 *		print_r($row->toArray());
 *		// TIP: Use PHP-Validate, by your's truly, to validate $row->toArray()
+*	}
+*
+*	// Iterate over all the rows using while.
+*	while ($reader->valid()) {
+*		$row = $reader->current(); // CSVReaderRow object
+*		print 'Price: ' . $row->get('Price') . "\n";
+*		print 'Name: ' . $row['Name'] . "\n"; // $row also supports array access
+*		print_r($row->toArray());
+*		// TIP: Use PHP-Validate, by your's truly, to validate $row->toArray()
+*		$reader->next();
 *	}
 * </pre>
 *
@@ -542,7 +552,7 @@ class CSVReader implements Iterator {
 	* Reads a CSV line, parses it into an array using str_getcsv(), and performs transcoding if necessary.
 	*
 	* @param boolean $iconv_strict
-	* @return array|false|null
+	* @return array|false
 	*/
 	protected function _fgetcsv($iconv_strict = false) {
 		$line = null;
@@ -556,7 +566,7 @@ class CSVReader implements Iterator {
 		else {
 			// Not using fgetcsv() because it is dependent on the locale setting.
 			$line = stream_get_line($this->h, $this->length, $this->line_separator);
-			if ($line === false) {
+			if (($line === false) || feof($this->h)) { // feof() check is needed for PHP < 5.4.4 because stream_get_line() kept returning an empty string instead of false at eof.
 				return false;
 			}
 			//$this->debug && error_log(__METHOD__ . ' read line: ' . bin2hex($line));
