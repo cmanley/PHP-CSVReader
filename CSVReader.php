@@ -13,7 +13,7 @@
 * @author    Craig Manley
 * @copyright Copyright © 2010, Craig Manley (www.craigmanley.com)
 * @license   http://www.opensource.org/licenses/mit-license.php Licensed under MIT
-* @version   $Id: CSVReader.php,v 1.15 2014/03/21 16:22:24 cmanley Exp $
+* @version   $Id: CSVReader.php,v 1.16 2014/06/10 20:33:45 cmanley Exp $
 * @package   cmanley
 */
 
@@ -349,7 +349,7 @@ class CSVReader implements Iterator {
 				$this->debug && error_log(__METHOD__ . ' Guessing file encoding using encodings: ' . join(', ', $encodings));
 				$this->file_encoding = mb_detect_encoding($s, $encodings, true);
 				unset($s, $encodings);
-				$this->debug && error_log(__METHOD__ . ' Guessed line separator: ' . ' (0x' . bin2hex($this->line_separator) . ')');
+				$this->debug && error_log(__METHOD__ . ' Guessed file encoding: ' . ' (0x' . bin2hex($this->file_encoding) . ')');
 			}
 
 			// Guess line separator.
@@ -374,8 +374,8 @@ class CSVReader implements Iterator {
 				else {
 					$this->line_separator = "\n";
 				}
+				$this->debug && error_log(__METHOD__ . ' Guessed line separator: ' . ' (0x' . bin2hex($this->line_separator) . ')');
 			}
-			$this->debug && error_log(__METHOD__ . ' Guessed line separator: ' . bin2hex($this->line_separator));
 		}
 
 		// Determine if transcoding is necessary for _fgetcsv().
