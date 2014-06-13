@@ -13,7 +13,7 @@
 * @author    Craig Manley
 * @copyright Copyright © 2010, Craig Manley (www.craigmanley.com)
 * @license   http://www.opensource.org/licenses/mit-license.php Licensed under MIT
-* @version   $Id: CSVReader.php,v 1.16 2014/06/10 20:33:45 cmanley Exp $
+* @version   $Id: CSVReader.php,v 1.17 2014/06/13 22:27:39 cmanley Exp $
 * @package   cmanley
 */
 
@@ -183,7 +183,10 @@ class CSVReader implements Iterator {
 					if (!is_array($value)) {
 						throw new \InvalidArgumentException("The '$key' option must be an associative array");
 					}
-					$opt_field_aliases = $value;
+					$opt_field_aliases = array();
+					foreach ($value as $k => $v) {
+						$opt_field_aliases[mb_strtolower($k)] = $v;
+					}
 				}
 				elseif ($key == 'field_normalizer') {
 					if (!is_callable($value)) {
