@@ -13,7 +13,7 @@
 * @author    Craig Manley
 * @copyright Copyright © 2010, Craig Manley (www.craigmanley.com)
 * @license   http://www.opensource.org/licenses/mit-license.php Licensed under MIT
-* @version   $Id: CSVReader.php,v 1.17 2014/06/13 22:27:39 cmanley Exp $
+* @version   $Id: CSVReader.php,v 1.18 2016/02/15 00:57:54 cmanley Exp $
 * @package   cmanley
 */
 
@@ -55,7 +55,7 @@ class CSVReaderException extends Exception {}
 *	// Show fieldnames from 1st row:
 *	print_r($reader->fieldNames());
 *
-*	// Iterate over all the rows using foreach. CVSReader behaves as an array.
+*	// Iterate over all the rows using foreach. CSVReader behaves as an array.
 *	foreach($reader as $row) { // $row is a CSVReaderRow object
 *		print 'Price: ' . $row->get('Price') . "\n";
 *		print 'Name: ' . $row['Name'] . "\n"; // $row also supports array access
@@ -149,8 +149,11 @@ class CSVReader implements Iterator {
 		$opt_include_fields = null;
 		if ($options) {
 			foreach ($options as $key => $value) {
+				if (is_null($value)) {
+					continue;
+				}
 				if (in_array($key, array('debug', 'skip_empty_lines'))) {
-					if (!(is_null($value) || is_bool($value) || is_int($value))) {
+					if (!(is_bool($value) || is_int($value))) {
 						throw new \InvalidArgumentException("The '$key' option must be a boolean");
 					}
 					$this->$key = $value;
