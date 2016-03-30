@@ -30,20 +30,18 @@ $reader = new CSVReader($h);
 print_r($reader->fieldNames());
 
 // Iterate over all the rows. CVSReader behaves as an array.
-foreach($reader as $row) { // $row is a CSVReaderRow object
-	print 'Price: ' . $row->get('Price') . "\n";
-	print 'Name: ' . $row['Name'] . "\n"; // $row also supports array access
-	print_r($row->toArray());
-	// TIP: Use PHP-Validate, by your's truly, to validate $row->toArray()
+foreach($reader as $row) {
+	// TIP: Use PHP-Validate, by your's truly, to validate $row
+	print 'Name: ' . $row['Name'] . "\n";
+	print_r($row);
 }
 
 // Iterate over all the rows using while.
 while ($reader->valid()) {
-	$row = $reader->current(); // CSVReaderRow object
-	print 'Price: ' . $row->get('Price') . "\n";
-	print 'Name: ' . $row['Name'] . "\n"; // $row also supports array access
-	print_r($row->toArray());
-	// TIP: Use PHP-Validate, by your's truly, to validate $row->toArray()
+	$row = $reader->current();
+	// TIP: Use PHP-Validate, by your's truly, to validate $row
+	print 'Name: ' . $row['Name'] . "\n";
+	print_r($row);
 	$reader->next();
 }
 ```

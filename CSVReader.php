@@ -1,6 +1,6 @@
 <?php
 /**
-* Contains the CSVReader, CSVReaderRow, and CSVReaderException classes.
+* Contains the CSVReader, and CSVReaderException classes.
 *
 * Dependencies:
 * <pre>
@@ -13,7 +13,7 @@
 * @author    Craig Manley
 * @copyright Copyright © 2010, Craig Manley (www.craigmanley.com)
 * @license   http://www.opensource.org/licenses/mit-license.php Licensed under MIT
-* @version   $Id: CSVReader.php,v 1.18 2016/02/15 00:57:54 cmanley Exp $
+* @version   $Id: CSVReader.php,v 1.19 2016/03/29 22:36:45 cmanley Exp $
 * @package   cmanley
 */
 
@@ -32,48 +32,6 @@ class CSVReaderException extends Exception {}
 * CSV file/stream reader class that implements the Iterator interface.
 * It supports files having a (UTF-8 or UTF-*) BOM, as well as non-seekable streams.
 *
-* Example(s):
-* <pre>
-*	ini_set('auto_detect_line_separators', 1); // Only necessary if CSVReader is having trouble detecting line separators in MAC files.
-*
-*	// read a plain CSV file
-*	$reader = new CSVReader('products.csv');
-*
-*	// read a gzipped CSV file
-*	$reader = new CSVReader('compress.zlib://products.csv.gz');
-*
-*	// read CSV from STDIN
-*	$reader = new CSVReader('php://stdin');
-*
-*	// read products.csv from within export.zip archive
-*	$reader = new CSVReader('zip://export.zip#products.csv');
-*
-*	// read from a open file handle
-*	$h = fopen('products.csv', 'r');
-*	$reader = new CSVReader($h);
-*
-*	// Show fieldnames from 1st row:
-*	print_r($reader->fieldNames());
-*
-*	// Iterate over all the rows using foreach. CSVReader behaves as an array.
-*	foreach($reader as $row) { // $row is a CSVReaderRow object
-*		print 'Price: ' . $row->get('Price') . "\n";
-*		print 'Name: ' . $row['Name'] . "\n"; // $row also supports array access
-*		print_r($row->toArray());
-*		// TIP: Use PHP-Validate, by your's truly, to validate $row->toArray()
-*	}
-*
-*	// Iterate over all the rows using while.
-*	while ($reader->valid()) {
-*		$row = $reader->current(); // CSVReaderRow object
-*		print 'Price: ' . $row->get('Price') . "\n";
-*		print 'Name: ' . $row['Name'] . "\n"; // $row also supports array access
-*		print_r($row->toArray());
-*		// TIP: Use PHP-Validate, by your's truly, to validate $row->toArray()
-*		$reader->next();
-*	}
-* </pre>
-*
 * @package  cmanley
 */
 class CSVReader implements Iterator {
@@ -85,15 +43,16 @@ class CSVReader implements Iterator {
 	protected $initial_lines_index = 0; // For non-seekable streams: index of which pre-read lines to read next. Used by _fgetcsv().
 	protected $bom_len = 0; // Contains the BOM length.
 	protected $field_cols = array(); // Associative array of fieldname => column index pairs.
-	protected $row; // Current CSVReaderRow object.
+	protected $row; // Current row (associative array).
 	protected $key = -1; // Data row index.
 	protected $must_transcode = false; // true if file encoding does not match internal encoding.
 
 	// Options:
 	protected $debug = false;
-	protected $file_encoding = null;
 	protected $internal_encoding = null;
 	protected $skip_empty_lines = false;
+
+	protected $file_encoding = null;
 	protected $length = 4096;
 	protected $delimiter = null; //',';
 	protected $enclosure = null; //'"';
@@ -109,14 +68,15 @@ class CSVReader implements Iterator {
 	*	- field_aliases: associative array of case insensitive field name alias (in file) => real name (as expected in code) pairs.
 	*	- field_normalizer: optional callback that receives a field name by reference to normalize (e.g. make lowercase).
 	*	- include_fields: optional array of field names to include. If given, then all other field names are excluded.
-	*	- file_encoding, default null, which means guess encoding using BOM or mb_detect_encoding().
 	*	- internal_encoding, default is mb_internal_encoding(), only effective if 'file_encoding' is given or detected.
-	*	- length: string, default 4096, see stream_get_line()
+	*	- skip_empty_lines, default false
+	*
 	*	- delimiter: string, guessed if not given with default ',', see str_getcsv()
 	*	- enclosure: string, guessed if not given with default '"', see str_getcsv()
 	*	- escape: string, default backslash, see str_getcsv()
+	*	- file_encoding, default null, which means guess encoding using BOM or mb_detect_encoding().
+	*	- length: string, default 4096, see stream_get_line()
 	*	- line_separator: string, if not given, then it's guessed.
-	*	- skip_empty_lines, default false
 	* @throws CSVReaderException
 	* @throws \InvalidArgumentException
 	*/
@@ -355,7 +315,7 @@ class CSVReader implements Iterator {
 				$this->debug && error_log(__METHOD__ . ' Guessing file encoding using encodings: ' . join(', ', $encodings));
 				$this->file_encoding = mb_detect_encoding($s, $encodings, true);
 				unset($s, $encodings);
-				$this->debug && error_log(__METHOD__ . ' Guessed file encoding: ' . ' (0x' . bin2hex($this->file_encoding) . ')');
+				$this->debug && error_log(__METHOD__ . ' Guessed file encoding: ' . $this->file_encoding);
 			}
 
 			// Guess line separator.
@@ -398,15 +358,8 @@ class CSVReader implements Iterator {
 					$this->must_transcode = false;
 				}
 			}
-			elseif ($this->file_encoding == 'Windows-1252') {
-				if ($this->internal_encoding == 'cp1252') { // alias
-					$this->must_transcode = false;
-				}
-			}
-			elseif ($this->file_encoding == 'cp1252') {
-				if ($this->internal_encoding == 'Windows-1252') { // alias
-					$this->must_transcode = false;
-				}
+			elseif (preg_replace('/^(?:cp|windows)-?/', '', strtolower($this->file_encoding)) == preg_replace('/^(?:cp|windows)-?/', '', strtolower($this->internal_encoding))) {
+				$this->must_transcode = false;
 			}
 		}
 		$this->debug && error_log(__METHOD__ . ' Must transcode: ' . var_export($this->must_transcode, 1));
@@ -423,6 +376,9 @@ class CSVReader implements Iterator {
 				$name = trim($row[$x]);
 				if (!(is_string($name) && strlen($name))) {
 					continue;
+				}
+				if ($this->must_transcode) {
+					$name = static::_transcode($this->file_encoding, $this->internal_encoding, $name);
 				}
 				if ($opt_field_normalizer) {
 					call_user_func_array($opt_field_normalizer, array(&$name));
@@ -454,7 +410,7 @@ class CSVReader implements Iterator {
 			$missing = array();
 			foreach ($opt_include_fields as $name) {
 				if (!array_key_exists($name, $this->field_cols)) {
-					array_push($missing, $name);
+					$missing []= $name;
 				}
 			}
 			if ($missing) {
@@ -463,7 +419,7 @@ class CSVReader implements Iterator {
 		}
 
 		// Read first data row.
-		$this->_read();
+		$this->next();
 	}
 
 
@@ -478,78 +434,116 @@ class CSVReader implements Iterator {
 
 
 	/**
+	* Transcodes the given string.
+	*
+	* @param string $value
+	* @param string $value
+	* @param string $value
+	* @return string
+	*/
+	protected static function _transcode($encoding_from, $encoding_to, $value = null) {
+		if (!(is_string($value) && strlen($value))) {
+			return $value;
+		}
+		return mb_convert_encoding($value, $encoding_to, $encoding_from);
+	}
+
+
+	/**
 	* Peeks into a string of CSV data and tries to guess the delimiter, enclosure, and line separator.
-	* Returns an associative array with keys 'line_separator', 'delimiter', 'enclosure'.
+	* Returns an associative array with keys 'line_ending', 'delimiter', 'enclosure'.
 	* Undetectable values will be null.
 	*
 	* @param string $data any length of data, but preferrably long enough to contain at least one whole line.
 	* @param string $data_encoding optional
-	* @param string $line_separator optional
 	* @return array
 	*/
-	public static function csv_guess($data, $data_encoding = null, $line_separator = null) {
+	public static function csv_guess($data, $data_encoding = null) {
 		// TODO: see Perl's Text::CSV::Separator which uses a more advanced approach to detect the delimiter.
 		$result = array(
-			'line_separator' => null,
+			'line_ending' => null,
 			'delimiter'	=> null,
 			'enclosure'	=> null,
 		);
 		$delimiters = array(',', ';', ':', '|', "\t");
 		$enclosures = array('"', "'", '');
-		$multibyte = $data_encoding && preg_match('/^UTF-(?:16|32)/', $data_encoding);
-		if ($multibyte) { // damn multibyte characters
+		$eols_single = array("\n", "\r");
+		$eols_multi = array("\r\n", "\n\r");
+
+		$multibyte = $data_encoding && is_string($data_encoding) && preg_match('/^UTF-(?:16|32)/', $data_encoding);
+		if ($multibyte) { # damn multibyte delimiters, enclosures, and line endings
 			foreach ($delimiters as &$x) {
-				$x = iconv('latin1', $data_encoding, $x);
+				$x = static::_transcode('latin1', $data_encoding, $x);
 				unset($x);
 			}
 			foreach ($enclosures as &$x) {
-				$x = iconv('latin1', $data_encoding, $x);
+				$x = static::_transcode('latin1', $data_encoding, $x);
+				unset($x);
+			}
+			foreach ($eols_single as &$x) {
+				$x = static::_transcode('latin1', $data_encoding, $x);
+				unset($x);
+			}
+			foreach ($eols_multi as &$x) {
+				$x = static::_transcode('latin1', $data_encoding, $x);
 				unset($x);
 			}
 		}
-		// Scan the 1st line only:
-		$line = null;
-		$cr = "\r";
-		$lf = "\n";
-		if ($multibyte) {
-			$cr = iconv('latin1', $data_encoding, $cr);
-			$lf = iconv('latin1', $data_encoding, $lf);
-		}
-		if (preg_match('/^(.*?)(' . preg_quote("$lf$cr") . '|' . preg_quote("$lf") . '(?!' . preg_quote("$cr") . ')|' . preg_quote("$cr") . '(?!' . preg_quote("$lf") . ')|' . preg_quote("$cr$lf") . ')/', $data, $matches)) {
-			$line = $matches[1];
-			// Guess line separator
-			if (isset($matches[2]) && strlen($matches[2])) {
-				$result['line_separator'] = $matches[2];
-			}
 
-			// Guess delimiter:
-			if (1) {
-				$max_count = 0;
-				$guessed_delimiter = null;
-				foreach ($delimiters as $delimiter) {
-					$count = substr_count($line, $delimiter);
+		# Guess line ending
+		$guessed_eol = null;
+		if (1) {
+			$max_count = 0;
+			foreach ($eols_multi as $eol) {
+				$count = substr_count($data, $eol);
+				if ($count > $max_count) {
+					$max_count = $count;
+					$guessed_eol = $eol;
+				}
+			}
+			if (is_null($guessed_eol)) {
+				foreach ($eols_single as $eol) {
+					$count = substr_count($data, $eol);
 					if ($count > $max_count) {
 						$max_count = $count;
-						$guessed_delimiter = $delimiter;
+						$guessed_eol = $eol;
 					}
 				}
-				$result['delimiter'] = $guessed_delimiter;
 			}
-
-			// Guess enclosure
-			if ($result['delimiter']) {
-				$max_count = 0;
-				$guessed_enclosure = null;
-				foreach ($enclosures as $enclosure) {
-					$count = substr_count($line, $enclosure . $result['delimiter'] . $enclosure);
-					if ($count > $max_count) {
-						$max_count = $count;
-						$guessed_enclosure = $enclosure;
-					}
-				}
-				$result['enclosure'] = $guessed_enclosure;
-			}
+			$result['line_ending'] = $guessed_eol;
 		}
+
+		# Remove line endings
+		$data = str_replace($guessed_eol, '', $data);
+
+		# Guess delimiter:
+		if (1) {
+			$max_count = 0;
+			$guessed_delimiter = null;
+			foreach ($delimiters as $delimiter) {
+				$count = substr_count($data, $delimiter);
+				if ($count > $max_count) {
+					$max_count = $count;
+					$guessed_delimiter = $delimiter;
+				}
+			}
+			$result['delimiter'] = $guessed_delimiter;
+		}
+
+		# Guess enclosure
+		if (!is_null($result['delimiter'])) {
+			$max_count = 0;
+			$guessed_enclosure = '';
+			foreach ($enclosures as $enclosure) {
+				$count = substr_count($data, $enclosure . $result['delimiter'] . $enclosure);
+				if ($count > $max_count) {
+					$max_count = $count;
+					$guessed_enclosure = $enclosure;
+				}
+			}
+			$result['enclosure'] = $guessed_enclosure;
+		}
+
 		return $result;
 	}
 
@@ -557,10 +551,9 @@ class CSVReader implements Iterator {
 	/**
 	* Reads a CSV line, parses it into an array using str_getcsv(), and performs transcoding if necessary.
 	*
-	* @param boolean $iconv_strict
 	* @return array|false
 	*/
-	protected function _fgetcsv($iconv_strict = false) {
+	protected function _fgetcsv() {
 		$line = null;
 		if (!$this->seekable && ($this->initial_lines_index < count($this->initial_lines))) {
 			$line = $this->initial_lines[$this->initial_lines_index++];
@@ -582,71 +575,16 @@ class CSVReader implements Iterator {
 		}
 		if ($this->must_transcode) {
 			//$this->debug && error_log(__METHOD__ . ' transcode string ' . bin2hex($line));
-			$to_encoding = $this->internal_encoding;
-			if (!$iconv_strict) {
-				$to_encoding .= '//IGNORE//TRANSLIT';
-			}
-			$line = iconv($this->file_encoding, $to_encoding, $line);
-			if ($line === false) { // iconv failed
+			$line = static::_transcode($this->file_encoding, $this->internal_encoding, $line);
+			if ($line === false) {
 				return false;
 			}
 		}
 		$csv = str_getcsv($line, $this->delimiter, $this->enclosure, $this->escape);
-		if (!$csv || (is_null($csv[0]) && (count($csv) == 1))) {
+		if (!$csv || (is_null(reset($csv) && (count($csv) == 1)))) {
 			return array();
 		}
 		return $csv;
-	}
-
-
-	/**
-	* Reads the next CSV data row and sets internal variables.
-	* Returns false if EOF was reached, else true.
-	* Skips empty lines if option 'skip_empty_lines' is true.
-	*
-	* @return boolean
-	*/
-	protected function _read() {
-		while (($row = $this->_fgetcsv()) !== false) {
-			if ($row) {
-				foreach ($row as &$col) {
-					if (!is_null($col)) {
-						$col = trim($col);
-						if (!strlen($col)) {
-							$col = null;
-						}
-					}
-				}
-				$class = $this->_rowClassName();
-				$this->row = new $class($row, $this->field_cols);
-				$this->key++;
-			}
-			else { // blank line
-				$this->row = null;
-				$this->key++;
-				if ($this->skip_empty_lines) {
-					continue;
-				}
-			}
-			break;
-		}
-		if ($row === false) {
-			$this->row = null;
-			$this->key = -1;
-			$this->initial_lines_index = 0;
-			return false;
-		}
-	}
-
-
-	/**
-	* Returns the row class name 'CSVReaderRow'.
-	* You may override this method to return a custom row class name.
-	*
-	* @return string
-	*/
-	protected function _rowClassName() {
-		return 'CSVReaderRow'; // or __CLASS__ . 'Row'
 	}
 
 
@@ -678,9 +616,47 @@ class CSVReader implements Iterator {
 
 	/**
 	* Required Iterator interface method.
+	* Reads the next CSV data row and sets internal variables.
+	* Returns false if EOF was reached, else true.
+	* Skips empty lines if option 'skip_empty_lines' is true.
 	*/
 	public function next() {
-		$this->_read();
+		while (($row = $this->_fgetcsv()) !== false) {
+			if ($row) {
+				foreach ($row as &$col) {
+					if (!is_null($col)) {
+						$col = trim($col);
+						if (!strlen($col)) {
+							$col = null;
+						}
+					}
+				}
+				// Convert row to associative array
+				$pairs = array();
+				foreach ($this->field_cols as $name => $i) {
+					$i = $this->field_cols[$name];
+					if ($i >= count($row)) {
+						continue;
+					}
+					$pairs[$name] = $row[$i];
+				}
+				$this->row = $pairs;
+				$this->key++;
+			}
+			else { // blank line
+				$this->row = null;
+				$this->key++;
+				if ($this->skip_empty_lines) {
+					continue;
+				}
+			}
+			break;
+		}
+		if ($row === false) {
+			$this->row = null;
+			$this->key = -1;
+			$this->initial_lines_index = 0;
+		}
 	}
 
 
@@ -698,7 +674,7 @@ class CSVReader implements Iterator {
 		$this->key = -1;
 		$this->initial_lines_index == 0;
 		if ($this->_fgetcsv()) { // skip header row
-			$this->_read();
+			$this->next();
 		}
 	}
 
@@ -716,151 +692,5 @@ class CSVReader implements Iterator {
 	*/
 	public function valid() {
 		return !is_null($this->row);
-	}
-}
-
-
-
-
-
-
-
-
-
-
-/**
-* Encapsulates a CSV row.
-* Created and returned by CSVReader.
-* This object should consume less memory than an associative array.
-*
-* @package  cmanley
-*/
-class CSVReaderRow implements \Countable, \IteratorAggregate, \ArrayAccess {
-
-	protected $field_cols;
-	protected $row;
-	protected $pairs; // cached result of toArray()
-
-
-	/**
-	* Constructor.
-	*
-	* @param array $row
-	* @param array $field_cols associative array of fieldname => column index pairs.
-	*/
-	public function __construct(array $row, array $field_cols) {
-		$this->row			= $row;
-		$this->field_cols	= $field_cols; // reference counted, not a copy
-	}
-
-
-	/**
-	* Returns the value of the field having the given column name.
-	*
-	* @param string $name
-	* @return string|null
-	*/
-	public function get($name) {
-		if (!array_key_exists($name, $this->field_cols)) {
-			return null;
-		}
-		$i = $this->field_cols[$name];
-		if ($i >= count($this->row)) {
-			return null;
-		}
-		return $this->row[$i];
-	}
-
-
-	/**
-	* Returns the row as an associative array.
-	*
-	* @param boolean $cacheable default false
-	* @return array
-	*/
-	public function toArray($cacheable = false) {
-		$pairs = $this->pairs;
-		if (is_null($pairs)) {
-			$pairs = array();
-			foreach ($this->field_cols as $name => $i) {
-				$i = $this->field_cols[$name];
-				if ($i >= count($this->row)) {
-					continue;
-				}
-				$pairs[$name] = $this->row[$i];
-			}
-			if ($cacheable) {
-				$this->pairs = $pairs;
-			}
-		}
-		return $pairs;
-	}
-
-
-	/**
-	* Return count of items in collection.
-	* Implements countable
-	*
-	* @return integer
-	*/
-	public function count() {
-		return count($this->toArray());
-	}
-
-
-	/**
-	* Returns the keys because array_keys() can't (yet).
-	*
-	* @return array
-	*/
-	public function keys() {
-		return array_keys($this->toArray());
-	}
-
-
-	/**
-	* Implements IteratorAggregate
-	*
-	* @return ArrayIterator
-	*/
-	public function getIterator() {
-		return new \ArrayIterator($this->toArray());
-	}
-
-
-	/**
-	* Implements ArrayAccess
-	*/
-	public function offsetSet($offset, $value) {
-		// Ignored because this is readonly
-	}
-
-
-	/**
-	* Implements ArrayAccess
-	*
-	* @return boolean
-	*/
-	public function offsetExists($offset) {
-		return array_key_exists($offset, $this->toArray());
-	}
-
-
-	/**
-	* Implements ArrayAccess
-	*/
-	public function offsetUnset($offset) {
-		unset($this->pairs[$offset]);
-	}
-
-
-	/**
-	* Implements ArrayAccess
-	*
-	* @return boolean
-	*/
-	public function offsetGet($offset) {
-		$array = $this->toArray();
-		return @$array[$offset];
 	}
 }
