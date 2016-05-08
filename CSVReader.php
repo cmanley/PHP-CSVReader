@@ -13,7 +13,7 @@
 * @author    Craig Manley
 * @copyright Copyright © 2010, Craig Manley (www.craigmanley.com)
 * @license   http://www.opensource.org/licenses/mit-license.php Licensed under MIT
-* @version   $Id: CSVReader.php,v 1.19 2016/03/29 22:36:45 cmanley Exp $
+* @version   $Id: CSVReader.php,v 1.20 2016/05/08 00:55:57 cmanley Exp $
 * @package   cmanley
 */
 
@@ -206,7 +206,7 @@ class CSVReader implements Iterator {
 			}
 			else {
 				if (!$this->line_separator && $this->bom_len && ($this->file_encoding != 'UTF-8')) { // A string with multibyte line separators. Can't use fgets() here because it doesn't support multibyte line separators.
-					if ($this->file_encoding = 'UTF-16LE') {
+					if ($this->file_encoding === 'UTF-16LE') {
 						$this->line_separator = "\x0A\x00";
 						$line .= stream_get_line($this->h, $this->length, $this->line_separator);
 						if (substr($line, -2) == "\x0D\x00") {
@@ -214,7 +214,7 @@ class CSVReader implements Iterator {
 							$line = substr($line, 0, strlen($line) - 2);
 						}
 					}
-					elseif ($this->file_encoding = 'UTF-16BE') {
+					elseif ($this->file_encoding === 'UTF-16BE') {
 						$this->line_separator = "\x00\x0A";
 						$line .= stream_get_line($this->h, $this->length, $this->line_separator);
 						if (substr($line, -2) == "\x00\x0D") {
@@ -222,7 +222,7 @@ class CSVReader implements Iterator {
 							$line = substr($line, 0, strlen($line) - 2);
 						}
 					}
-					elseif ($this->file_encoding = 'UTF-32LE') {
+					elseif ($this->file_encoding === 'UTF-32LE') {
 						$this->line_separator = "\x0A\x00\x00\x00";
 						$line .= stream_get_line($this->h, $this->length, $this->line_separator);
 						if (substr($line, -4) == "\x0D\x00\x00\x00") {
@@ -230,7 +230,7 @@ class CSVReader implements Iterator {
 							$line = substr($line, 0, strlen($line) - 4);
 						}
 					}
-					elseif ($this->file_encoding = 'UTF-32BE') {
+					elseif ($this->file_encoding === 'UTF-32BE') {
 						$this->line_separator = "\x00\x00\x00\x0A";
 						$line .= stream_get_line($this->h, $this->length, $this->line_separator);
 						if (substr($line, -4) == "\x00\x00\x00\x0D") {
@@ -377,9 +377,6 @@ class CSVReader implements Iterator {
 				if (!(is_string($name) && strlen($name))) {
 					continue;
 				}
-				if ($this->must_transcode) {
-					$name = static::_transcode($this->file_encoding, $this->internal_encoding, $name);
-				}
 				if ($opt_field_normalizer) {
 					call_user_func_array($opt_field_normalizer, array(&$name));
 					if (!(is_string($name) && strlen($name))) {
@@ -387,7 +384,7 @@ class CSVReader implements Iterator {
 					}
 				}
 				if ($opt_field_aliases) {
-					$alias = mb_strtolower($name);
+					$alias = mb_strtolower($name, $this->internal_encoding);
 					if (array_key_exists($alias, $opt_field_aliases)) {
 						$name = $opt_field_aliases[$alias];
 					}

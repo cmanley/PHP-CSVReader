@@ -50,7 +50,6 @@ class Test extends PHPUnit_Framework_TestCase
 
 	public function testCreate() {
 		$class = static::NAMESPACE_NAME . '\\' . static::CLASS_NAME;
-		$class = static::NAMESPACE_NAME . '\\' . static::CLASS_NAME;
 		foreach (array(
 			'csv',
 			'tsv',
@@ -60,7 +59,7 @@ class Test extends PHPUnit_Framework_TestCase
 			if (preg_match('/\.gz$/', $ext)) {
 				$stream = 'compress.zlib://' . $stream;
 			}
-			$reader = new CSVReader($stream);
+			$reader = new $class($stream);
 			$expected_field_names = array(
 				'ISO 639-1 alpha-2',
 				'ISO 639-2 alpha-3',
@@ -90,7 +89,7 @@ if (isset($argv)) {
 		if (preg_match('/\.gz$/', $ext)) {
 			$stream = 'compress.zlib://' . $stream;
 		}
-		$reader = new CSVReader($stream, array(
+		$reader = new $class($stream, array(
 			'debug'	=> true,
 		));
 		print_r($reader->fieldNames());
