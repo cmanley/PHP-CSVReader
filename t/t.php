@@ -9,7 +9,8 @@ class Test extends PHPUnit_Framework_TestCase
 {
 	const NAMESPACE_NAME = '';
 	const CLASS_NAME = 'CSVReader';
-	const FILE = __DIR__ . '/../' . self::CLASS_NAME . '.php';
+	#const FILE = __DIR__ . '/../' . self::CLASS_NAME . '.php'; # >= PHP 5.6
+	const FILE = '../CSVReader.php';
 
     public function testRequire() {
         $this->assertFileExists(static::FILE);
@@ -72,6 +73,20 @@ class Test extends PHPUnit_Framework_TestCase
 			#	print_r($row);
 			#}
 		}
+	}
+
+	public function testIterator() {
+		$class = static::NAMESPACE_NAME . '\\' . static::CLASS_NAME;
+		$stream = 'users.csv';
+		$reader = new CSVReader($stream);
+		$row = $reader->current();
+		$this->assertEquals('Chris', $row['First Name'], 'First record contains Chris');
+		#error_log(print_r($row,1));
+		foreach($reader as $row) { // $row is an associative array
+			# nop
+		}
+		$this->assertEquals('Melissa', $row['First Name'], 'Last record contains Melissa');
+		#error_log(print_r($row,1));
 	}
 
 }

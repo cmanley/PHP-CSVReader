@@ -13,7 +13,7 @@
 * @author    Craig Manley
 * @copyright Copyright © 2010, Craig Manley (www.craigmanley.com)
 * @license   http://www.opensource.org/licenses/mit-license.php Licensed under MIT
-* @version   $Id: CSVReader.php,v 1.20 2016/05/08 00:55:57 cmanley Exp $
+* @version   $Id: CSVReader.php,v 1.21 2016/06/11 21:42:21 cmanley Exp $
 * @package   cmanley
 */
 
@@ -562,7 +562,7 @@ class CSVReader implements Iterator {
 		else {
 			// Not using fgetcsv() because it is dependent on the locale setting.
 			$line = stream_get_line($this->h, $this->length, $this->line_separator);
-			if (($line === false) || feof($this->h)) { // feof() check is needed for PHP < 5.4.4 because stream_get_line() kept returning an empty string instead of false at eof.
+			if (($line === false) || (($line === '') && feof($this->h))) { // feof() check is needed for PHP < 5.4.4 because stream_get_line() kept returning an empty string instead of false at eof.
 				return false;
 			}
 			//$this->debug && error_log(__METHOD__ . ' read line: ' . bin2hex($line));
