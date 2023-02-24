@@ -13,7 +13,7 @@
 * @author    Craig Manley
 * @copyright Copyright © 2010, Craig Manley (www.craigmanley.com)
 * @license   http://www.opensource.org/licenses/mit-license.php Licensed under MIT
-* @version   $Id: CSVReader.php,v 1.21 2016/06/11 21:42:21 cmanley Exp $
+* @version   $Id: CSVReader.php,v 1.22 2023/02/24 19:01:11 cmanley Exp $
 * @package   cmanley
 */
 
@@ -376,6 +376,9 @@ class CSVReader implements Iterator {
 				$name = trim($row[$x]);
 				if (!(is_string($name) && strlen($name))) {
 					continue;
+				}
+				if ($this->must_transcode) {
+					$name = static::_transcode($this->file_encoding, $this->internal_encoding, $name);
 				}
 				if ($opt_field_normalizer) {
 					call_user_func_array($opt_field_normalizer, array(&$name));
