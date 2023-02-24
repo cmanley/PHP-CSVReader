@@ -1,11 +1,11 @@
 <?php
+namespace PHPUnit\Framework;
 if (isset($argv)) {
 	print "Running outside of phpunit. Consider using phpunit.\n";
-	class PHPUnit_Framework_TestCase {}
+	class TestCase {};
 }
 
-
-class Test extends PHPUnit_Framework_TestCase
+class T extends \PHPUnit\Framework\TestCase
 {
 	const NAMESPACE_NAME = '';
 	const CLASS_NAME = 'CSVReader';
@@ -21,7 +21,9 @@ class Test extends PHPUnit_Framework_TestCase
 
 	public function testImplementsInterface() {
 		$class = static::NAMESPACE_NAME . '\\' . static::CLASS_NAME;
-		$interfaces = array('\\Iterator');
+		$interfaces = [
+			'\\Iterator',
+		];
 		foreach ($interfaces as $interface) {
 			$this->assertTrue(is_subclass_of ($class, $interface, true), "Check that class $class implements $interface");
 		}
@@ -29,44 +31,59 @@ class Test extends PHPUnit_Framework_TestCase
 
 	public function testMethodsExist() {
 		$class = static::NAMESPACE_NAME . '\\' . static::CLASS_NAME;
-		$methods = array(
-			'__construct',
-			'__destruct',
-			'_transcode',		// static
-			'csv_guess',		// static
-			'fieldNames',
-			'_fgetcsv',
-			'seekable',
+		$methods = [
+			'__construct'	=> \ReflectionMethod::IS_PUBLIC,
+			'__destruct'	=> \ReflectionMethod::IS_PUBLIC,
+			'_transcode'	=> \ReflectionMethod::IS_PROTECTED | \ReflectionMethod::IS_STATIC,
+			'csv_guess'		=> \ReflectionMethod::IS_PUBLIC | \ReflectionMethod::IS_STATIC,
+			'fieldNames'	=> \ReflectionMethod::IS_PUBLIC,
+			'_fgetcsv'		=> \ReflectionMethod::IS_PROTECTED,
 
-			'current',			// Iterator interface
-			'key',				// Iterator interface
-			'next',				// Iterator interface
-			'rewind',			// Iterator interface
-			'valid',			// Iterator interface
-		);
-		foreach ($methods as $method) {
-			$this->assertTrue(method_exists($class, $method), "Check method $class::$method() exists.");
+			# Iterator interface methods:
+			'current'		=> \ReflectionMethod::IS_PUBLIC,
+			'key'			=> \ReflectionMethod::IS_PUBLIC,
+			'next'			=> \ReflectionMethod::IS_PUBLIC,
+			'rewind'		=> \ReflectionMethod::IS_PUBLIC,
+			'valid'			=> \ReflectionMethod::IS_PUBLIC,
+		];
+		foreach ($methods as $name => $expected_modifiers) {
+			$exists = method_exists($class, $name);
+			$this->assertTrue($exists, "Check method $class::$name() exists.");
+			if ($exists) {
+				$method = new \ReflectionMethod($class, $name);
+				$actual_modifiers = $method->getModifiers() & (
+					\ReflectionMethod::IS_STATIC |
+					\ReflectionMethod::IS_PUBLIC |
+					\ReflectionMethod::IS_PROTECTED |
+					\ReflectionMethod::IS_PRIVATE |
+					\ReflectionMethod::IS_ABSTRACT |
+					\ReflectionMethod::IS_FINAL
+				);
+				#error_log("$name expected: " . $expected_modifiers);
+				#error_log("$name actual:   " . $actual_modifiers);
+				$this->assertEquals($expected_modifiers, $actual_modifiers, "Expected $class::$name() modifiers to be \"" . join(' ', \Reflection::getModifierNames($expected_modifiers)) . '" but got "' . join(' ', \Reflection::getModifierNames($actual_modifiers)) . '" instead.');
+			}
 		}
 	}
 
 	public function testCreate() {
 		$class = static::NAMESPACE_NAME . '\\' . static::CLASS_NAME;
-		foreach (array(
+		foreach ([
 			'csv',
 			'tsv',
 			'csv.gz',
-		) as $ext) {
+		] as $ext) {
 			$stream = $file = "iso639lang.$ext";
 			if (preg_match('/\.gz$/', $ext)) {
 				$stream = 'compress.zlib://' . $stream;
 			}
 			$reader = new $class($stream);
-			$expected_field_names = array(
+			$expected_field_names = [
 				'ISO 639-1 alpha-2',
 				'ISO 639-2 alpha-3',
 				'ISO 639 English name of language',
 				'ISO 639 French name of language',
-			);
+			];
 			$this->assertEquals(var_export($expected_field_names,1), var_export($reader->fieldNames(),1), 'fieldNames()');
 			#foreach($reader as $row) { // $row is an associative array
 			#	print $row['ISO 639-2 alpha-3'] . "\t" . $row['ISO 639 French name of language'] . "\n";
@@ -78,35 +95,37 @@ class Test extends PHPUnit_Framework_TestCase
 	public function testIterator() {
 		$class = static::NAMESPACE_NAME . '\\' . static::CLASS_NAME;
 		$stream = 'users.csv';
-		$reader = new CSVReader($stream);
+		$reader = new $class($stream);
 		$row = $reader->current();
-		$this->assertEquals('Chris', $row['First Name'], 'First record contains Chris');
-		#error_log(print_r($row,1));
-		foreach($reader as $row) { // $row is an associative array
-			# nop
-		}
-		$this->assertEquals('Melissa', $row['First Name'], 'Last record contains Melissa');
-		#error_log(print_r($row,1));
+		$expect = 'Chris';
+		$this->assertEquals($expect, $row['First Name'], "First record contains $expect");
+		foreach($reader as $row) {}
+		$expect = 'Melissa';
+		$this->assertEquals($expect, $row['First Name'], "Last record contains $expect");
+		$reader->rewind();
+		$row = $reader->current();
+		$expect = 'Chris';
+		$this->assertEquals($expect, $row['First Name'], "First record contains $expect after rewind");
 	}
 
 }
 
 
 if (isset($argv)) {
-	$class = Test::NAMESPACE_NAME . '\\' . Test::CLASS_NAME;
-	require_once(Test::FILE);
-	foreach (array(
+	$class = T::NAMESPACE_NAME . '\\' . T::CLASS_NAME;
+	require_once(T::FILE);
+	foreach ([
 		'csv',
 		'tsv',
 		'csv.gz',
-	) as $ext) {
+	] as $ext) {
 		$stream = $file = "iso639lang.$ext";
 		if (preg_match('/\.gz$/', $ext)) {
 			$stream = 'compress.zlib://' . $stream;
 		}
-		$reader = new $class($stream, array(
+		$reader = new $class($stream, [
 			'debug'	=> true,
-		));
+		]);
 		print_r($reader->fieldNames());
 		foreach($reader as $row) { // $row is an associative array
 			#if ($row['ISO 639-1 alpha-2'] == 'bo') {	#"bo","tib (B)","Tibetan","tibétain"
