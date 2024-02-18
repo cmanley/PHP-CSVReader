@@ -13,7 +13,7 @@
 * @author    Craig Manley
 * @copyright Copyright © 2010, Craig Manley (www.craigmanley.com)
 * @license   http://www.opensource.org/licenses/mit-license.php Licensed under MIT
-* @version   $Id: CSVReader.php,v 1.22 2023/02/24 19:01:11 cmanley Exp $
+* @version   $Id: CSVReader.php,v 1.23 2024/02/18 00:17:41 cmanley Exp $
 * @package   cmanley
 */
 
