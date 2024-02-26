@@ -13,7 +13,7 @@
 * @author    Craig Manley
 * @copyright Copyright © 2010, Craig Manley (www.craigmanley.com)
 * @license   http://www.opensource.org/licenses/mit-license.php Licensed under MIT
-* @version   $Id: CSVReader.php,v 1.23 2024/02/18 00:17:41 cmanley Exp $
+* @version   $Id: CSVReader.php,v 1.24 2024/02/26 14:35:50 cmanley Exp $
 * @package   cmanley
 */
 
@@ -167,7 +167,7 @@ class CSVReader implements Iterator {
 		}
 		$this->debug && error_log(__METHOD__ . ' Internal encoding: ' . $this->internal_encoding);
 		$this->debug && error_log(__METHOD__ . ' File: ' . (is_string($file) ? $file : gettype($file)));
-		$this->debug && error_log(__METHOD__ . ' Stream is seekable: ' . var_export($this->seekable,1));
+		$this->debug && error_log(__METHOD__ . ' Stream is seekable: ' . var_export($this->seekable, true));
 
 		# Read the BOM, if any.
 		if (1) {
@@ -362,12 +362,12 @@ class CSVReader implements Iterator {
 				$this->must_transcode = false;
 			}
 		}
-		$this->debug && error_log(__METHOD__ . ' Must transcode: ' . var_export($this->must_transcode, 1));
+		$this->debug && error_log(__METHOD__ . ' Must transcode: ' . var_export($this->must_transcode, true));
 
 		# Read header row.
 		#@trigger_error('');
 		if ($row = $this->_fgetcsv()) {
-			$this->debug && error_log(__METHOD__ . ' Raw header row: ' . print_r($row,1));
+			$this->debug && error_log(__METHOD__ . ' Raw header row: ' . print_r($row, true));
 			$unknown_fieldinfo = []; # field name => col index pairs
 
 			# Get the fieldname => column indices
@@ -402,7 +402,7 @@ class CSVReader implements Iterator {
 				}
 				$this->field_cols[$name] = $x;
 			}
-			$this->debug && error_log(__METHOD__ . ' Field name => column index pairs: ' . print_r($this->field_cols,1));
+			$this->debug && error_log(__METHOD__ . ' Field name => column index pairs: ' . print_r($this->field_cols, true));
 		}
 
 		# Check that all the required header fields are present.

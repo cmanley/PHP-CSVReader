@@ -84,7 +84,7 @@ class T extends \PHPUnit\Framework\TestCase
 				'ISO 639 English name of language',
 				'ISO 639 French name of language',
 			];
-			$this->assertEquals(var_export($expected_field_names,1), var_export($reader->fieldNames(),1), 'fieldNames()');
+			$this->assertEquals(var_export($expected_field_names,1), var_export($reader->fieldNames(), true), 'fieldNames()');
 			#foreach($reader as $row) { // $row is an associative array
 			#	print $row['ISO 639-2 alpha-3'] . "\t" . $row['ISO 639 French name of language'] . "\n";
 			#	print_r($row);
