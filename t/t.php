@@ -92,6 +92,25 @@ class T extends \PHPUnit\Framework\TestCase
 		}
 	}
 
+	public function testEmptyEnclosure() {
+		foreach ([null, ['enclosure' => ''], ['enclosure' => '', 'escape' => '']] as $options) {
+			$h = fopen('php://memory', 'w+');
+			try {
+				fwrite($h, "name,description\nAlice,plain\nBob,\"has, comma and \"\"quotes\"\"\"\n");
+				rewind($h);
+				$reader = new \CSVReader($h, $options);
+				$this->assertSame(['name', 'description'], $reader->fieldNames());
+				$this->assertSame([
+					['name' => 'Alice', 'description' => 'plain'],
+					['name' => 'Bob', 'description' => 'has, comma and "quotes"'],
+				], iterator_to_array($reader, false));
+			}
+			finally {
+				fclose($h);
+			}
+		}
+	}
+
 	public function testIterator() {
 		$class = static::NAMESPACE_NAME . '\\' . static::CLASS_NAME;
 		$stream = 'users.csv';

@@ -13,7 +13,7 @@
 * @author    Craig Manley
 * @copyright Copyright © 2010, Craig Manley (www.craigmanley.com)
 * @license   http://www.opensource.org/licenses/mit-license.php Licensed under MIT
-* @version   $Id: CSVReader.php,v 1.24 2024/02/26 14:35:50 cmanley Exp $
+* @version   $Id: CSVReader.php,v 1.25 2026/11/18 12:51:54 cmanley Exp $
 * @package   cmanley
 */
 
@@ -72,7 +72,7 @@ class CSVReader implements Iterator {
 	*	- skip_empty_lines, default false
 	*
 	*	- delimiter: string, guessed if not given with default ',', see str_getcsv()
-	*	- enclosure: string, guessed if not given with default '"', see str_getcsv()
+	*	- enclosure: string, guessed if not given with default '"'; an empty string also uses '"', see str_getcsv()
 	*	- escape: string, default backslash, see str_getcsv()
 	*	- file_encoding, default null, which means guess encoding using BOM or mb_detect_encoding().
 	*	- length: string, default 4096, see stream_get_line()
@@ -80,7 +80,7 @@ class CSVReader implements Iterator {
 	* @throws CSVReaderException
 	* @throws \InvalidArgumentException
 	*/
-	function __construct($file, array $options = null) {
+	function __construct($file, ?array $options = null) {
 		if (is_string($file)) {
 			if (($this->h = fopen($file, 'r')) === FALSE) {
 				throw new CSVReaderException('Failed to open "' . $file . '" for reading');
@@ -148,7 +148,7 @@ class CSVReader implements Iterator {
 					}
 					$opt_field_aliases = [];
 					foreach ($value as $k => $v) {
-						$opt_field_aliases[mb_strtolower($k)] = $v;
+						$opt_field_aliases[mb_strtolower((string) $k)] = $v;
 					}
 				}
 				elseif ($key == 'field_normalizer') {
@@ -209,7 +209,7 @@ class CSVReader implements Iterator {
 					if ($this->file_encoding === 'UTF-16LE') {
 						$this->line_separator = "\x0A\x00";
 						$line .= stream_get_line($this->h, $this->length, $this->line_separator);
-						if (substr($line, -2) == "\x0D\x00") {
+						if (str_ends_with($line, "\x0D\x00")) {
 							$this->line_separator = "\x0D\x00" . $this->line_separator;
 							$line = substr($line, 0, strlen($line) - 2);
 						}
@@ -217,7 +217,7 @@ class CSVReader implements Iterator {
 					elseif ($this->file_encoding === 'UTF-16BE') {
 						$this->line_separator = "\x00\x0A";
 						$line .= stream_get_line($this->h, $this->length, $this->line_separator);
-						if (substr($line, -2) == "\x00\x0D") {
+						if (str_ends_with($line, "\x00\x0D")) {
 							$this->line_separator = "\x00\x0D" . $this->line_separator;
 							$line = substr($line, 0, strlen($line) - 2);
 						}
@@ -225,7 +225,7 @@ class CSVReader implements Iterator {
 					elseif ($this->file_encoding === 'UTF-32LE') {
 						$this->line_separator = "\x0A\x00\x00\x00";
 						$line .= stream_get_line($this->h, $this->length, $this->line_separator);
-						if (substr($line, -4) == "\x0D\x00\x00\x00") {
+						if (str_ends_with($line, "\x0D\x00\x00\x00")) {
 							$this->line_separator = "\x0D\x00\x00\x00" . $this->line_separator;
 							$line = substr($line, 0, strlen($line) - 4);
 						}
@@ -233,7 +233,7 @@ class CSVReader implements Iterator {
 					elseif ($this->file_encoding === 'UTF-32BE') {
 						$this->line_separator = "\x00\x00\x00\x0A";
 						$line .= stream_get_line($this->h, $this->length, $this->line_separator);
-						if (substr($line, -4) == "\x00\x00\x00\x0D") {
+						if (str_ends_with($line, "\x00\x00\x00\x0D")) {
 							$this->line_separator = "\x00\x00\x00\x0D" . $this->line_separator;
 							$line = substr($line, 0, strlen($line) - 4);
 						}
@@ -252,7 +252,7 @@ class CSVReader implements Iterator {
 				if ($this->bom_len) {
 					error_log(__METHOD__ . ' BOM length: ' . $this->bom_len);
 					error_log(__METHOD__ . ' BOM file encoding: ' . $this->file_encoding);
-					error_log(__METHOD__ . ' Guessed line separator: ' . ' (0x' . bin2hex($this->line_separator) . ')');
+					error_log(__METHOD__ . ' Guessed line separator: ' . ' (0x' . bin2hex((string) $this->line_separator) . ')');
 				}
 				else {
 					error_log(__METHOD__ . ' File has no BOM.');
@@ -272,13 +272,13 @@ class CSVReader implements Iterator {
 			}
 			else {
 				$i = 0;
-				while (($line = stream_get_line($this->h, $this->length, $this->line_separator)) !== false) {
+				while (($line = stream_get_line($this->h, $this->length, (string) $this->line_separator)) !== false) {
 					$this->initial_lines []= $line;
 					if (++$i > 100) {
 						break;
 					}
 				}
-				$s = join($this->line_separator ? $this->line_separator : "\n", $this->initial_lines);
+				$s = join($this->line_separator ?: "\n", $this->initial_lines);
 			}
 			# If delimiter or enclosure are not given, try to guess them.
 			if (is_null($this->delimiter) || is_null($this->enclosure)) {
@@ -320,7 +320,7 @@ class CSVReader implements Iterator {
 
 			# Guess line separator.
 			if (!$this->line_separator) {
-				if (preg_match('/^UTF-(?:16|32)/', $this->file_encoding)) { # Multibyte line separators. Can't use fgets() here because it doesn't support multibyte line separators.
+				if (preg_match('/^UTF-(?:16|32)/', (string) $this->file_encoding)) { # Multibyte line separators. Can't use fgets() here because it doesn't support multibyte line separators.
 					if ($this->file_encoding = 'UTF-16LE') {
 						$this->line_separator = "\x0A\x00";
 					}
@@ -345,7 +345,7 @@ class CSVReader implements Iterator {
 		}
 
 		# Determine if transcoding is necessary for _fgetcsv().
-		if ($this->file_encoding && $this->internal_encoding && strcasecmp($this->file_encoding, $this->internal_encoding)) {
+		if ($this->file_encoding && $this->internal_encoding && strcasecmp((string) $this->file_encoding, (string) $this->internal_encoding)) {
 			$this->must_transcode = true;
 			# Try to gain effeciency here by eliminating transcoding if file encoding is a subset or alias of internal encoding.
 			if ($this->file_encoding == 'ASCII') {
@@ -358,7 +358,7 @@ class CSVReader implements Iterator {
 					$this->must_transcode = false;
 				}
 			}
-			elseif (preg_replace('/^(?:cp|windows)-?/', '', strtolower($this->file_encoding)) == preg_replace('/^(?:cp|windows)-?/', '', strtolower($this->internal_encoding))) {
+			elseif (preg_replace('/^(?:cp|windows)-?/', '', strtolower((string) $this->file_encoding)) == preg_replace('/^(?:cp|windows)-?/', '', strtolower((string) $this->internal_encoding))) {
 				$this->must_transcode = false;
 			}
 		}
@@ -373,7 +373,7 @@ class CSVReader implements Iterator {
 			# Get the fieldname => column indices
 			$x = 0;
 			for ($x = 0; $x < count($row); $x++) {
-				$name = trim($row[$x]);
+				$name = trim((string) $row[$x]);
 				if (!(is_string($name) && strlen($name))) {
 					continue;
 				}
@@ -458,7 +458,7 @@ class CSVReader implements Iterator {
 	* @param string $data_encoding optional
 	* @return array
 	*/
-	public static function csv_guess(string $data, string $data_encoding = null): array {
+	public static function csv_guess(string $data, ?string $data_encoding = null): array {
 		# TODO: see Perl's Text::CSV::Separator which uses a more advanced approach to detect the delimiter.
 		$result = [
 			'line_ending' => null,
@@ -564,13 +564,13 @@ class CSVReader implements Iterator {
 		}
 		else {
 			# Not using fgetcsv() because it is dependent on the locale setting.
-			$line = stream_get_line($this->h, $this->length, $this->line_separator);
+			$line = stream_get_line($this->h, $this->length, (string) $this->line_separator);
 			if (($line === false) || (($line === '') && feof($this->h))) { # feof() check is needed for PHP < 5.4.4 because stream_get_line() kept returning an empty string instead of false at eof.
 				return false;
 			}
 			#$this->debug && error_log(__METHOD__ . ' read line: ' . bin2hex($line));
 		}
-		if (!strlen($line)) {
+		if (!strlen((string) $line)) {
 			return [];
 		}
 		if ($this->must_transcode) {
@@ -580,7 +580,9 @@ class CSVReader implements Iterator {
 				return false;
 			}
 		}
-		$csv = str_getcsv($line, $this->delimiter, $this->enclosure, $this->escape);
+		# Preserve the historical double-quote fallback for empty enclosures (invalid in PHP 8.4+).
+		$enclosure = $this->enclosure === '' ? '"' : $this->enclosure;
+		$csv = str_getcsv((string) $line, $this->delimiter, $enclosure, $this->escape);
 		if (!$csv || (is_null(reset($csv) && (count($csv) == 1)))) {
 			return [];
 		}
